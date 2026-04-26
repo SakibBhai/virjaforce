@@ -33,6 +33,7 @@ import {
   ArrowUpDown,
   TrendingUp,
   CalendarClock,
+  MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +66,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
+import WhatsAppPanel from '@/components/admin/whatsapp-panel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -494,7 +496,7 @@ function CustomersLoadingSkeleton() {
 
 // ─── Main Admin Panel ────────────────────────────────────────────────────────
 
-type AdminTab = 'orders' | 'customers';
+type AdminTab = 'orders' | 'customers' | 'whatsapp';
 type SortField = 'orderCount' | 'totalSpent' | 'lastOrder';
 
 export default function AdminPanel() {
@@ -520,15 +522,16 @@ export default function AdminPanel() {
             {[
               { key: 'orders' as AdminTab, label: 'অর্ডার ম্যানেজমেন্ট', icon: ShoppingCart },
               { key: 'customers' as AdminTab, label: 'গ্রাহক ড্যাশবোর্ড', icon: Users },
+              { key: 'whatsapp' as AdminTab, label: 'WhatsApp', icon: MessageCircle },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.key;
               return (
                 <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive ? 'bg-vf-gold/15 text-vf-gold border border-vf-gold/30' : 'text-vf-text-muted hover:text-vf-cream hover:bg-[#2A2A25]/50 border border-transparent'}`}>
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive ? (tab.key === 'whatsapp' ? 'bg-[#25D366]/15 text-[#25D366] border border-[#25D366]/30' : 'bg-vf-gold/15 text-vf-gold border border-vf-gold/30') : 'text-vf-text-muted hover:text-vf-cream hover:bg-[#2A2A25]/50 border border-transparent'}`}>
                   <Icon className="w-4 h-4" />
                   <span className="hidden sm:inline">{tab.label}</span>
-                  <span className="sm:hidden">{tab.key === 'orders' ? 'অর্ডার' : 'গ্রাহক'}</span>
+                  <span className="sm:hidden">{tab.key === 'orders' ? 'অর্ডার' : tab.key === 'customers' ? 'গ্রাহক' : 'WA'}</span>
                 </button>
               );
             })}
@@ -540,9 +543,13 @@ export default function AdminPanel() {
             <motion.div key="orders" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.3 }}>
               <OrdersTab />
             </motion.div>
-          ) : (
+          ) : activeTab === 'customers' ? (
             <motion.div key="customers" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.3 }}>
               <CustomersTab />
+            </motion.div>
+          ) : (
+            <motion.div key="whatsapp" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.3 }}>
+              <WhatsAppPanel />
             </motion.div>
           )}
         </AnimatePresence>

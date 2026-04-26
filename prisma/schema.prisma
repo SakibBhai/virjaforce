@@ -19,6 +19,7 @@ model Order {
   amount    Int      @default(1799)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  messages  Message[]
 }
 
 model Review {
@@ -33,4 +34,46 @@ model Review {
   isVideo    Boolean  @default(false)
   isFeatured Boolean  @default(false)
   createdAt  DateTime @default(now())
+}
+
+model Message {
+  id           String    @id @default(cuid())
+  phone        String
+  customerName String    @default("")
+  message      String
+  status       String    @default("pending") // pending, sent, delivered, failed
+  type         String    @default("manual")   // manual, scheduled, automation
+  templateName String    @default("")
+  order        Order?    @relation(fields: [orderId], references: [id])
+  orderId      String    @default("")
+  scheduledAt  DateTime?
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  failedReason String    @default("")
+  createdAt    DateTime  @default(now())
+}
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  category  String   @default("general") // order_update, promotion, reminder, follow_up, general
+  content   String
+  variables String   @default("") // comma-separated: name,phone,order_id,status,amount
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  automations MessageAutomation[]
+}
+
+model MessageAutomation {
+  id           String          @id @default(cuid())
+  name         String
+  triggerType  String          @default("status_change") // status_change, new_order
+  triggerValue String          @default("") // e.g. "shipped" for status_change trigger
+  template     MessageTemplate @relation(fields: [templateId], references: [id])
+  templateId   String
+  isActive     Boolean         @default(true)
+  delayMinutes Int             @default(0) // send after X minutes of trigger
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 }
