@@ -20,7 +20,7 @@ import {
   Users,
   LayoutDashboard,
   UserCheck,
-  Home,
+  Home as HomeIcon,
 } from 'lucide-react';
 import {
   Accordion,
@@ -306,7 +306,7 @@ export default function Home() {
   }, []);
 
   const navItems: { key: ViewType; label: string; icon: React.ElementType }[] = [
-    { key: 'landing', label: 'হোম', icon: Home },
+    { key: 'landing', label: 'হোম', icon: HomeIcon },
     { key: 'admin', label: 'অ্যাডমিন', icon: LayoutDashboard },
     { key: 'customer', label: 'অর্ডার ট্র্যাকিং', icon: UserCheck },
   ];
@@ -715,8 +715,9 @@ export default function Home() {
           </div>
         </section>
         </>)}
+      </main>
 
-        {/* ═══ FOOTER ═══ */}
+      {/* ═══ FOOTER ═══ */}
         {activeView === 'landing' && (
         <footer className="border-t border-[#1A1A17] py-8 text-center relative z-[1] mt-auto">
           <div className="max-w-[820px] mx-auto px-6">
@@ -767,6 +768,7 @@ export default function Home() {
           <motion.span className="absolute inset-0 rounded-full border-2 border-[#25D366]" initial={{ scale: 1, opacity: 0.8 }} animate={{ scale: 1.5, opacity: 0 }} transition={{ duration: 1 }} />
         )}
       </motion.a>
+      )}
 
       {/* ═══ ORDER DIALOG ═══ */}
       <OrderDialog open={orderOpen} onOpenChange={setOrderOpen} />
