@@ -4,23 +4,17 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import {
   ShieldCheck,
-  Clock,
   Truck,
   Star,
   ChevronDown,
   MessageCircle,
   Check,
-  ArrowRight,
-  Sparkles,
-  Zap,
-  Heart,
-  Shield,
-  Award,
-  TrendingUp,
   Users,
   LayoutDashboard,
   UserCheck,
   Home as HomeIcon,
+  Heart,
+  Award,
 } from 'lucide-react';
 import {
   Accordion,
@@ -28,7 +22,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Progress } from '@/components/ui/progress';
 import OrderDialog from '@/components/landing/order-dialog';
 import InlineOrderForm from '@/components/landing/inline-order-form';
 import VideoReviewCarousel from '@/components/landing/video-review-carousel';
