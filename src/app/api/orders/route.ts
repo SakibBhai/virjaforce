@@ -4,9 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, phone, address, division, notes } = body;
+    const { name, phone, address, division, notes, quantity } = body;
 
-    // Validation
     const errors: Record<string, string> = {};
     if (!name?.trim()) errors.name = 'নাম লিখুন';
     if (!phone?.trim()) errors.phone = 'ফোন নম্বর লিখুন';
@@ -19,6 +18,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, errors }, { status: 400 });
     }
 
+    const qty = Math.max(1, Math.min(10, parseInt(String(quantity)) || 1));
+    const unitPrice = 1799;
+    const totalAmount = unitPrice * qty;
+
     const order = await db.order.create({
       data: {
         name: name.trim(),
@@ -26,7 +29,8 @@ export async function POST(request: NextRequest) {
         address: address.trim(),
         division: division.trim(),
         notes: notes?.trim() || '',
-        amount: 1799,
+        quantity: qty,
+        amount: totalAmount,
         status: 'pending',
       },
     });
@@ -38,6 +42,7 @@ export async function POST(request: NextRequest) {
         name: order.name,
         phone: order.phone,
         status: order.status,
+        amount: order.amount,
         createdAt: order.createdAt,
       },
     });
@@ -50,19 +55,59 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const orders = await db.order.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const search = searchParams.get('search');
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get('limit') || '50')));
 
-    const count = await db.order.count();
+    const where: Record<string, unknown> = {};
+
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search } },
+        { phone: { contains: search } },
+        { id: { contains: search } },
+      ];
+    }
+
+    const [orders, total, statusCounts] = await Promise.all([
+      db.order.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      db.order.count({ where }),
+      db.order.groupBy({
+        by: ['status'],
+        _count: { status: true },
+      }),
+    ]);
+
+    const revenue = await db.order.aggregate({
+      _sum: { amount: true },
+      where: status && status !== 'all' ? { status } : undefined,
+    });
 
     return NextResponse.json({
       success: true,
       orders,
-      total: count,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      statusCounts: statusCounts.reduce<Record<string, number>>((acc, item) => {
+        acc[item.status] = item._count.status;
+        return acc;
+      }, {}),
+      totalRevenue: revenue._sum.amount || 0,
     });
   } catch (error) {
     console.error('Order fetch error:', error);

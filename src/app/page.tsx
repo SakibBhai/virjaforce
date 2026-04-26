@@ -18,6 +18,9 @@ import {
   Award,
   TrendingUp,
   Users,
+  LayoutDashboard,
+  UserCheck,
+  Home,
 } from 'lucide-react';
 import {
   Accordion,
@@ -29,6 +32,8 @@ import { Progress } from '@/components/ui/progress';
 import OrderDialog from '@/components/landing/order-dialog';
 import InlineOrderForm from '@/components/landing/inline-order-form';
 import VideoReviewCarousel from '@/components/landing/video-review-carousel';
+import AdminPanel from '@/components/admin/admin-panel';
+import CustomerDashboard from '@/components/admin/customer-dashboard';
 
 /* ─── Types ─── */
 interface Review {
@@ -225,10 +230,14 @@ function StatCounter({ stat }: { stat: { icon: React.ReactNode; value: number; s
   );
 }
 
+/* ─── View Type ─── */
+type ViewType = 'landing' | 'admin' | 'customer';
+
 /* ═══════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════ */
 export default function Home() {
+  const [activeView, setActiveView] = useState<ViewType>('landing');
   const [orderOpen, setOrderOpen] = useState(false);
   const [expandedPain, setExpandedPain] = useState<number | null>(null);
   const [selectedIngredient, setSelectedIngredient] = useState<number | null>(null);
@@ -296,10 +305,18 @@ export default function Home() {
     document.getElementById('order')?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
+  const navItems: { key: ViewType; label: string; icon: React.ElementType }[] = [
+    { key: 'landing', label: 'হোম', icon: Home },
+    { key: 'admin', label: 'অ্যাডমিন', icon: LayoutDashboard },
+    { key: 'customer', label: 'অর্ডার ট্র্যাকিং', icon: UserCheck },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col relative" style={{ background: '#0A0A08' }}>
-      {/* Scroll Progress Bar */}
-      <motion.div className="scroll-progress" style={{ width: scrollProgressWidth }} />
+      {/* Scroll Progress Bar - only on landing */}
+      {activeView === 'landing' && (
+        <motion.div className="scroll-progress" style={{ width: scrollProgressWidth }} />
+      )}
 
       {/* ═══ TOP BAR ═══ */}
       <div className="bg-vf-red text-center py-2.5 px-4 text-[13px] font-medium tracking-wide relative z-10">
@@ -308,8 +325,48 @@ export default function Home() {
         </span>
       </div>
 
+      {/* ═══ NAVIGATION BAR ═══ */}
+      <nav className="bg-vf-dark2 border-b border-[#1E1E1B] sticky top-0 z-[50]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-2">
+              <span className="font-display text-xl font-black text-vf-gold">VajraForce</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeView === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => { setActiveView(item.key); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-vf-gold/15 text-vf-gold border border-vf-gold/30'
+                        : 'text-vf-text-muted hover:text-vf-cream hover:bg-vf-dark3 border border-transparent'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </nav>
+
       {/* ═══ MAIN CONTENT ═══ */}
       <main className="flex-1 relative z-[1]">
+        {/* ─── ADMIN PANEL VIEW ─── */}
+        {activeView === 'admin' && <AdminPanel />}
+
+        {/* ─── CUSTOMER DASHBOARD VIEW ─── */}
+        {activeView === 'customer' && <CustomerDashboard />}
+
+        {/* ─── LANDING PAGE VIEW ─── */}
+        {activeView === 'landing' && (
+        <>
         {/* ─── HERO ─── */}
         <section className="py-16 sm:py-20 md:py-24 text-center relative overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
@@ -657,19 +714,21 @@ export default function Home() {
             <InlineOrderForm />
           </div>
         </section>
-      </main>
+        </>)}
 
-      {/* ═══ FOOTER ═══ */}
-      <footer className="border-t border-[#1A1A17] py-8 text-center relative z-[1] mt-auto">
-        <div className="max-w-[820px] mx-auto px-6">
-          <p className="text-[12px] text-vf-text-muted">VajraForce — Registered Herbal Supplement · DGDA Licensed</p>
-          <p className="text-[12px] text-vf-text-muted mt-2">এই প্রোডাক্ট কোনো রোগ নির্ণয় বা চিকিৎসা করে না। সুস্থ জীবনযাপনের সহায়ক।</p>
-        </div>
-      </footer>
+        {/* ═══ FOOTER ═══ */}
+        {activeView === 'landing' && (
+        <footer className="border-t border-[#1A1A17] py-8 text-center relative z-[1] mt-auto">
+          <div className="max-w-[820px] mx-auto px-6">
+            <p className="text-[12px] text-vf-text-muted">VajraForce — Registered Herbal Supplement · DGDA Licensed</p>
+            <p className="text-[12px] text-vf-text-muted mt-2">এই প্রোডাক্ট কোনো রোগ নির্ণয় বা চিকিৎসা করে না। সুস্থ জীবনযাপনের সহায়ক।</p>
+          </div>
+        </footer>
+        )}
 
-      {/* ═══ STICKY BOTTOM BAR ═══ */}
-      <AnimatePresence>
-        {showStickyBar && (
+        {/* ═══ STICKY BOTTOM BAR (landing only) ═══ */}
+        <AnimatePresence>
+          {activeView === 'landing' && showStickyBar && (
           <motion.div
             className="fixed bottom-0 left-0 right-0 bg-vf-dark2/95 backdrop-blur-sm border-t border-vf-gold-dim/40 py-3 px-4 sm:px-6 flex items-center justify-center gap-4 sm:gap-5 z-[100]"
             initial={{ y: 80 }}
@@ -689,10 +748,11 @@ export default function Home() {
             </motion.button>
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>
 
-      {/* ═══ FLOATING WHATSAPP BUTTON ═══ */}
-      <motion.a
+        {/* ═══ FLOATING WHATSAPP BUTTON (landing only) ═══ */}
+        {activeView === 'landing' && (
+        <motion.a
         href="#"
         className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-[90] w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg shadow-[#25D366]/30 hover:shadow-xl hover:shadow-[#25D366]/40 transition-shadow"
         whileHover={{ scale: 1.1 }}
