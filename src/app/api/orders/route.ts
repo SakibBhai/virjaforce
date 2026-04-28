@@ -117,3 +117,41 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { ids, status, bulkUpdate } = body;
+
+    if (bulkUpdate && Array.isArray(ids) && ids.length > 0 && status) {
+      const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid status' },
+          { status: 400 }
+        );
+      }
+
+      const result = await db.order.updateMany({
+        where: { id: { in: ids } },
+        data: { status },
+      });
+
+      return NextResponse.json({
+        success: true,
+        updatedCount: result.count,
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Invalid request' },
+      { status: 400 }
+    );
+  } catch (error) {
+    console.error('Bulk update error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Bulk update failed' },
+      { status: 500 }
+    );
+  }
+}

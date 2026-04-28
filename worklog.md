@@ -198,3 +198,38 @@ Stage Summary:
   6. ✅ Order tracking text notifications (via automation triggers)
   7. ✅ Variable replacement in templates ({name}, {phone}, {order_id}, {status}, {amount})
 - Infrastructure ready for real WhatsApp API integration (currently simulates sending)
+
+---
+Task ID: 6
+Agent: Main Agent
+Task: Bulk Print System with Barcode Generation
+
+Work Log:
+- Installed jsbarcode + @types/jsbarcode for barcode generation
+- Added PUT endpoint to /api/orders for bulk status updates (updates multiple orders at once)
+- Created BulkPrintDialog component (src/components/admin/bulk-print-dialog.tsx):
+  - Two layout options: 4 labels/page (2×2 grid) and 6 labels/page (2×3 grid)
+  - 6-per-page uses 2 columns × 3 rows layout (NOT 3×2) as per user requirement
+  - Generates EAN/barcode from order ID using JsBarcode
+  - Opens print preview in new window with full A4 sizing (210mm × 297mm)
+  - Proper CSS grid alignment with page-break rules for multi-page printing
+  - Auto-triggers print dialog on open
+- Updated admin-panel.tsx OrdersTab:
+  - Added Checkbox component to table headers and rows (desktop)
+  - Added Checkbox to MobileOrderCard component (mobile)
+  - Added bulk action bar with AnimatePresence (appears when orders selected)
+  - Bulk action bar features: selected count, status dropdown, bulk update button, print button, cancel button
+  - Select all / deselect all functionality
+  - Selection clears when filters change (status tab / search)
+  - Selected orders get gold highlight styling
+  - Added BulkPrintDialog integration
+- Added new imports: Checkbox, Select, BulkPrintDialog, Printer icon
+- ESLint passes clean with zero errors
+
+Stage Summary:
+- Complete bulk print system with barcode generation built
+- Print layouts: 4/page (2×2) and 6/page (2×3) — user specifically wanted 2×3 not 3×2
+- Full A4 page sizing with proper grid alignment and page breaks
+- Bulk status update API working (PUT /api/orders with bulkUpdate flag)
+- Checkboxes on both desktop table and mobile cards
+- Bulk action bar with status update and print functionality

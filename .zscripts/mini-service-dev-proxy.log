@@ -1,8 +1,8 @@
 [dev-proxy] Installing dependencies...
-bun install v1.3.12 (700fc117)
+bun install v1.3.14 (0d9b296a)
 No packages! Deleted empty lockfile
 
-[1.00ms] done
+[6.00ms] done
 [dev-proxy] Running bun run dev...
 $ bun --hot index.ts
 Keepalive proxy started - pinging localhost:3000 every 10s

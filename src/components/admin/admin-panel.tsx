@@ -34,6 +34,7 @@ import {
   TrendingUp,
   CalendarClock,
   MessageCircle,
+  Printer,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,7 +67,16 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import WhatsAppPanel from '@/components/admin/whatsapp-panel';
+import BulkPrintDialog from '@/components/admin/bulk-print-dialog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -367,15 +377,23 @@ function CustomerDetailDialog({ customer, open, onClose }: {
 
 // ─── Mobile Order Card ───────────────────────────────────────────────────────
 
-function MobileOrderCard({ order, onView, onDelete, onStatusChange }: {
+function MobileOrderCard({ order, onView, onDelete, onStatusChange, selected, onToggleSelect }: {
   order: Order; onView: () => void; onDelete: () => void; onStatusChange: (status: string) => void;
+  selected: boolean; onToggleSelect: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-      className="bg-vf-dark3 border border-[#2A2A25] rounded-xl overflow-hidden">
+      className={`bg-vf-dark3 border rounded-xl overflow-hidden transition-colors ${selected ? 'border-vf-gold/50' : 'border-[#2A2A25]'}`}>
       <div className="p-4 cursor-pointer hover:bg-[#2A2A25]/30 transition-colors" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5 flex-shrink-0 mt-0.5" onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={selected}
+              onCheckedChange={onToggleSelect}
+              className="border-[#3A3A35] data-[state=checked]:bg-vf-gold data-[state=checked]:border-vf-gold"
+            />
+          </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1"><Hash className="w-3 h-3 text-vf-text-muted flex-shrink-0" /><span className="text-vf-text-muted text-[11px] font-mono truncate">{truncateId(order.id)}</span></div>
             <p className="text-vf-cream font-semibold text-sm truncate">{order.name}</p>
@@ -573,6 +591,12 @@ function OrdersTab() {
   const [deleteOrder, setDeleteOrder] = useState<Order | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
@@ -604,6 +628,46 @@ function OrdersTab() {
   };
 
   const tabCounts = useMemo(() => ({ all: totalOrders, ...statusCounts }), [totalOrders, statusCounts]);
+
+  const selectedOrders = useMemo(() => orders.filter((o) => selectedIds.has(o.id)), [orders, selectedIds]);
+  const allSelected = orders.length > 0 && selectedIds.size === orders.length;
+  const someSelected = selectedIds.size > 0 && !allSelected;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(orders.map((o) => o.id)));
+  };
+
+  const handleBulkStatusUpdate = async () => {
+    if (!bulkStatus || selectedIds.size === 0) return;
+    try {
+      setBulkUpdating(true);
+      const res = await fetch('/api/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds), status: bulkStatus, bulkUpdate: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedIds(new Set());
+        setBulkStatus('');
+        fetchOrders();
+      }
+    } catch {} finally { setBulkUpdating(false); }
+  };
+
+  // Clear selection when filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [activeStatusTab, debouncedSearch]);
 
   if (loading && !orders.length) return <OrdersLoadingSkeleton />;
 
@@ -642,6 +706,70 @@ function OrdersTab() {
         </div>
       </div>
 
+      {/* Bulk Action Bar */}
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-vf-gold/10 border border-vf-gold/30 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center gap-3"
+          >
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <span className="text-vf-gold text-sm font-semibold whitespace-nowrap">
+                {selectedIds.size} টি নির্বাচিত
+              </span>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                  <SelectTrigger className="bg-vf-dark4 border-[#2A2A25] text-vf-cream text-xs h-8 w-auto min-w-[120px]">
+                    <SelectValue placeholder="স্ট্যাটাস নির্বাচন" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-vf-dark4 border-[#2A2A25]">
+                    {VALID_STATUSES.map((status) => {
+                      const sc = STATUS_CONFIG[status];
+                      return (
+                        <SelectItem key={status} value={status} className="text-vf-cream text-xs focus:bg-[#2A2A25] focus:text-vf-gold">
+                          {sc.label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleBulkStatusUpdate}
+                  disabled={!bulkStatus || bulkUpdating}
+                  className="text-vf-cream hover:text-vf-gold hover:bg-vf-gold/10 text-xs h-8"
+                >
+                  {bulkUpdating ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Check className="w-3 h-3 mr-1" />}
+                  আপডেট
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => setShowPrintDialog(true)}
+                className="bg-vf-gold hover:bg-vf-gold-light text-vf-dark font-semibold text-xs h-8 gap-1.5"
+              >
+                <Printer className="w-3 h-3" />
+                প্রিন্ট
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedIds(new Set())}
+                className="text-vf-text-muted hover:text-vf-cream hover:bg-[#2A2A25] text-xs h-8"
+              >
+                <X className="w-3 h-3 mr-1" />
+                বাতিল
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Orders List */}
       {orders.length === 0 && !loading ? (
         <EmptyState message={searchQuery ? `"${searchQuery}" দিয়ে কোনো অর্ডার খুঁজে পাওয়া যায়নি।` : activeStatusTab !== 'all' ? `${STATUS_CONFIG[activeStatusTab]?.label || activeStatusTab} স্ট্যাটাসে কোনো অর্ডার নেই।` : 'এখনো কোনো অর্ডার আসেনি।'} />
@@ -649,7 +777,7 @@ function OrdersTab() {
         <>
           <div className="md:hidden space-y-3">
             <AnimatePresence mode="popLayout">{orders.map((order) => (
-              <MobileOrderCard key={order.id} order={order} onView={() => setDetailOrder(order)} onDelete={() => setDeleteOrder(order)} onStatusChange={(status) => handleStatusChange(order.id, status)} />
+              <MobileOrderCard key={order.id} order={order} onView={() => setDetailOrder(order)} onDelete={() => setDeleteOrder(order)} onStatusChange={(status) => handleStatusChange(order.id, status)} selected={selectedIds.has(order.id)} onToggleSelect={() => toggleSelect(order.id)} />
             ))}</AnimatePresence>
           </div>
           <div className="hidden md:block bg-vf-dark4 border border-[#2A2A25] rounded-xl overflow-hidden">
@@ -657,6 +785,14 @@ function OrdersTab() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[#2A2A25]">
+                    <th className="text-left py-3 px-3 w-10">
+                      <Checkbox
+                        checked={allSelected}
+                        ref={(el) => { if (el) { const input = el as unknown as HTMLInputElement; (input as unknown as {indeterminate: boolean}).indeterminate = someSelected; } }}
+                        onCheckedChange={toggleSelectAll}
+                        className="border-[#3A3A35] data-[state=checked]:bg-vf-gold data-[state=checked]:border-vf-gold"
+                      />
+                    </th>
                     {['আইডি', 'নাম', 'ফোন', 'বিভাগ', 'পরিমাণ', 'মূল্য', 'স্ট্যাটাস', 'তারিখ', 'অ্যাকশন'].map((h) => (
                       <th key={h} className="text-left py-3 px-4 text-vf-text-muted text-[11px] font-semibold uppercase tracking-wider">{h}</th>
                     ))}
@@ -664,7 +800,14 @@ function OrdersTab() {
                 </thead>
                 <tbody>
                   {orders.map((order) => (
-                    <motion.tr key={order.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b border-[#2A2A25]/50 hover:bg-[#2A2A25]/20 transition-colors group">
+                    <motion.tr key={order.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`border-b border-[#2A2A25]/50 hover:bg-[#2A2A25]/20 transition-colors group ${selectedIds.has(order.id) ? 'bg-vf-gold/5' : ''}`}>
+                      <td className="py-3 px-3">
+                        <Checkbox
+                          checked={selectedIds.has(order.id)}
+                          onCheckedChange={() => toggleSelect(order.id)}
+                          className="border-[#3A3A35] data-[state=checked]:bg-vf-gold data-[state=checked]:border-vf-gold"
+                        />
+                      </td>
                       <td className="py-3 px-4"><button onClick={() => setDetailOrder(order)} className="flex items-center gap-1.5 text-vf-cream text-sm font-mono hover:text-vf-gold transition-colors" title={order.id}><Hash className="w-3 h-3 text-vf-text-muted" />{truncateId(order.id)}</button></td>
                       <td className="py-3 px-4"><span className="text-vf-cream text-sm font-medium">{order.name}</span></td>
                       <td className="py-3 px-4"><span className="text-vf-cream2 text-sm">{order.phone}</span></td>
@@ -719,6 +862,13 @@ function OrdersTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk Print Dialog */}
+      <BulkPrintDialog
+        orders={selectedOrders}
+        open={showPrintDialog}
+        onClose={() => setShowPrintDialog(false)}
+      />
     </div>
   );
 }
