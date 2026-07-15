@@ -234,7 +234,6 @@ export default function Home() {
   const [orderOpen, setOrderOpen] = useState(false);
   const [expandedPain, setExpandedPain] = useState<number | null>(null);
   const [selectedIngredient, setSelectedIngredient] = useState<number | null>(null);
-  const [showStickyBar, setShowStickyBar] = useState(false);
   const [stockPercent, setStockPercent] = useState(0);
   const [whatsappPulse, setWhatsappPulse] = useState(false);
 
@@ -261,13 +260,6 @@ export default function Home() {
       })
       .catch(console.error)
       .finally(() => setReviewsLoading(false));
-  }, []);
-
-  // Sticky bar visibility
-  useEffect(() => {
-    const handleScroll = () => setShowStickyBar(window.scrollY > 600);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   // Stock bar animation
@@ -720,29 +712,26 @@ export default function Home() {
         </footer>
         )}
 
-        {/* ═══ STICKY BOTTOM BAR (landing only) ═══ */}
-        <AnimatePresence>
-          {activeView === 'landing' && showStickyBar && (
+        {/* ═══ STICKY BOTTOM BAR — always visible (landing only) ═══ */}
+        {activeView === 'landing' && (
           <motion.div
-            className="fixed bottom-0 left-0 right-0 bg-vf-dark2/95 backdrop-blur-sm border-t border-vf-gold-dim/40 py-3 px-4 sm:px-6 flex items-center justify-center gap-4 sm:gap-5 z-[100]"
+            className="fixed bottom-0 left-0 right-0 bg-vf-dark2/95 backdrop-blur-md border-t border-vf-gold/50 py-3 px-4 sm:px-6 flex items-center justify-center gap-4 sm:gap-5 z-[100] shadow-[0_-4px_20px_rgba(201,168,76,0.15)]"
             initial={{ y: 80 }}
             animate={{ y: 0 }}
-            exit={{ y: 80 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
             <span className="text-[13px] text-vf-cream2 hidden sm:inline">মাত্র <strong className="text-vf-gold">৪৭টি</strong> বাকি · দাম <strong className="text-vf-gold">৳১,৭৯৯</strong> (৬৩% ছাড়)</span>
             <span className="text-[13px] text-vf-cream2 sm:hidden"><strong className="text-vf-gold">৳১,৭৯৯</strong> · ৬৩% ছাড়</span>
             <motion.button
-              className="bg-vf-gold hover:bg-vf-gold-light text-vf-dark font-bold text-[14px] py-2.5 px-6 rounded flex-shrink-0 transition-colors"
+              className="bg-vf-gold hover:bg-vf-gold-light text-vf-dark font-bold text-[14px] py-2.5 px-6 rounded flex-shrink-0 transition-colors shadow-lg shadow-vf-gold/20"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => scrollToOrder()}
+              onClick={() => setOrderOpen(true)}
             >
-              এখনই অর্ডার করো →
+              এখনই অর্ডার করুন →
             </motion.button>
           </motion.div>
         )}
-        </AnimatePresence>
 
         {/* ═══ FLOATING WHATSAPP BUTTON (landing only) ═══ */}
         {activeView === 'landing' && (
